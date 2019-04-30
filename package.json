@@ -1,0 +1,17 @@
+{
+  "name": "data-hko",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "moment": "^2.24.0",
+    "xmldom": "^0.1.27",
+    "xpath": "0.0.27"
+  }
+}
