@@ -42,4 +42,30 @@ async function forecastsExtract() {
   await fs.promises.writeFile('forecasts-extract.json', JSON.stringify(result));
 }
 
-forecastsExtract();
+async function forecastsTransform() {
+  const results = JSON.parse(await fs.promises.readFile('forecasts-extract.json', 'utf8'));
+  const transformedResults = []
+
+  for (const result of results) {
+    let match = result.forecast.match(/本港地區今日天氣預測:<br\/>(.*?)<br\/>/);
+    let rain = match[1].match(/狂風雷暴/)
+    if (rain != null) {
+      rain = '狂風雷暴';
+    } else {
+      rain = match[1].match(/有[^有雨]*?雨/)
+      if (rain != null) {
+        rain = rain[0].replace(/(一兩陣|幾陣|薄霧及)/g, '')
+      }
+    }
+
+    transformedResults.push({
+      date: result.date,
+      rain: rain
+    })
+  }
+
+  await fs.promises.writeFile('forecasts-transform.json', JSON.stringify(transformedResults))
+}
+
+// forecastsExtract();
+forecastsTransform();
