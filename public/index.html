@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=420, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
   <title>天文台理想與現實</title>
@@ -10,6 +10,14 @@
     body {
       text-align: center;
       font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      color: #ffffff;
+      background: #4EA0CD;
+      padding: 1rem;
+      margin-bottom: 1rem;
     }
     h1 {
       font-size: 48px;
@@ -24,12 +32,30 @@
     #calendar svg {
       margin: 5%;
     }
+
+    #statistics div.diagnostic {
+      width: 50%;
+      margin: 2rem auto;
+    }
+    #statistics div.diagnostic .row {
+      display: flex;
+    }
+    #statistics div.diagnostic .row > div {
+      flex: 1;
+      border: solid 1px #cccccc;
+    }
   </style>
 </head>
 <body>
-    <h1>天文台理想與現實</h1>
+    <header>
+      <h1>天文台理想與現實</h1>
+    </header>
+
     <div id="legend"></div>
     <div id="calendar"></div>
+
+    <h3>統計數據</h3>
+    <div id="statistics"></div>
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <script src="index.js"></script>
 </body>

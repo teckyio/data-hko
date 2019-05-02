@@ -1,10 +1,16 @@
 const cellSize = Math.min((document.documentElement.clientWidth - 40)/ 8, 40)
 const marginSize = 2
-const labelSize = 100
-const labelPadding = 10
+const labelSize = 60
+const labelHeight = cellSize
+const axisHeight = cellSize / 2
+const labelPadding = 5
 const rectRadius = 3
 const monthNameHeight = 40
 const monthNames = ['一月', '二月', '三月', '四月', '五月']
+
+const statLabelSize = 100
+const statCellWidth = Math.min((document.documentElement.clientWidth - statLabelSize * 2)/ 2, 200)
+const statCellHeight = statCellWidth / 3
 
 const dateParse = d3.timeParse('%Y-%m-%d')
 
@@ -12,8 +18,9 @@ const dateFormat = d3.timeFormat('%Y-%m-%d')
 const weekDayFormat = d3.timeFormat('%w');
 const weekFormat = d3.timeFormat('%U');
 
-const forecastInterpolate = d3.interpolateRgb('#83AFFE', '#022256')
+const forecastInterpolate = d3.interpolateRgb('#82E6FF', '#05337C');
 const forecastWordMap = d3.scalePoint().domain(['有微雨', '有驟雨', '有雨', '狂風雷暴']).range([0, 1]);
+const statisticsInterpolate = d3.interpolateRgb('#C4DED2', '#3D9970');
   
 (async function() {
   const actuals = await d3.json('/actuals-transform.json')
@@ -60,7 +67,7 @@ const forecastWordMap = d3.scalePoint().domain(['有微雨', '有驟雨', '有�
     .enter().append('text')
     .classed('label', true)
     .attr('dominant-baseline', 'middle')
-    .attr('font-size', 16)
+    .attr('font-size', 12)
     .attr('x', (_d, i) => (cellSize + labelSize) * i + cellSize + labelPadding )
     .attr('y', cellSize + marginSize + cellSize / 2)
     .text((d) => d)
@@ -75,7 +82,7 @@ const forecastWordMap = d3.scalePoint().domain(['有微雨', '有驟雨', '有�
     .attr('transform', 'translate(0, ' + (cellSize * 2 + marginSize * 3) + ')');
   
   forecastLegend.selectAll('rect')
-    .data(d3.range(0, 1, 1/forecastWordMap.domain().length))
+    .data(d3.range(0, forecastWordMap.domain().length).map(d => d / (forecastWordMap.domain().length)))
     .enter().append('rect')
     .attr('x', (_d, i) => (cellSize + labelSize) * i)
     .attr('y', cellSize + marginSize)
@@ -86,13 +93,12 @@ const forecastWordMap = d3.scalePoint().domain(['有微雨', '有驟雨', '有�
     .attr('fill', '#cccccc')
 
   forecastLegend.selectAll('text.cloud')
-    .data(d3.range(0, 1, 1/forecastWordMap.domain().length))
+  .data(d3.range(0, forecastWordMap.domain().length).map(d => d / (forecastWordMap.domain().length - 1)))
     .enter().append('text')
     .classed('fa', true)
     .classed('cloud', true)
     .attr('text-anchor', 'middle')
     .attr('dominant-baseline', 'middle')
-    .attr('font-size', 16)
     .attr('fill', 'white')
     .attr('x', (_d, i) => (cellSize + labelSize) * i + cellSize / 2 )
     .attr('y', cellSize + marginSize + cellSize / 2)
@@ -100,14 +106,14 @@ const forecastWordMap = d3.scalePoint().domain(['有微雨', '有驟雨', '有�
     .text((d) => d > 0 ? '\uf73d' : '')
   
   forecastLegend.selectAll('text.label')
-    .data(d3.range(0, 1, 1/forecastWordMap.domain().length))
+  .data(d3.range(0, forecastWordMap.domain().length).map(d => d / (forecastWordMap.domain().length - 1)))
     .enter().append('text')
     .classed('label', true)
     .attr('dominant-baseline', 'middle')
-    .attr('font-size', 16)
+    .attr('font-size', 12)
     .attr('x', (_d, i) => (cellSize + labelSize) * i + cellSize + labelPadding )
     .attr('y', cellSize + marginSize + cellSize / 2)
-    .text((d) => (d * maxRain).toFixed(0) + ' 毫升')
+    .text((d) => d > 0 ? (d * maxRain).toFixed(0) + ' 毫升' : '無雨')
   
   forecastLegend.append('text')
     .attr('dominant-baseline', 'middle')
@@ -155,6 +161,141 @@ const forecastWordMap = d3.scalePoint().domain(['有微雨', '有驟雨', '有�
     .attr('dorminant-baseline', 'middle')
     .attr('font-weight', 'bold')
     .text(m => monthNames[m.getMonth()])
+  
+  // Statistics
+  const confusionMatrix = [
+    [
+      forecasts.filter(f => f.rain != null && actualsLookup[f.date] > 0).length,
+      forecasts.filter(f => f.rain == null && actualsLookup[f.date] > 0).length,
+    ],
+    [
+      forecasts.filter(f => f.rain != null && actualsLookup[f.date] == 0).length,
+      forecasts.filter(f => f.rain == null && actualsLookup[f.date] == 0).length,
+    ]
+  ]
+  const truePositive = confusionMatrix[0][0];
+  const falseNegative = confusionMatrix[0][1];
+  const falsePositive = confusionMatrix[1][0];
+  const trueNegative = confusionMatrix[1][1];
+
+  const maxHit = d3.max([truePositive, falseNegative, falsePositive, trueNegative]) 
+  const minHit = d3.min([truePositive, falseNegative, falsePositive, trueNegative]) 
+
+  const hitScale = d3.scaleLinear([minHit, maxHit], [0, 1])
+
+  const confusionMatrixLabel = [
+    ['預測有雨', '預測無雨'],
+    ['實際有雨', '實際無雨'],
+  ]
+
+  const stat = d3.select('#statistics').append('svg')
+    .attr('width', (statCellWidth + marginSize) * 2 + statLabelSize)
+    .attr('height', (statCellHeight + marginSize) * 2 + labelHeight + axisHeight + 20)
+
+    stat.selectAll('g.rect')
+    .data(confusionMatrix)
+    .enter().append('g')
+      .classed('rect', true)
+      .attr('transform', (_d, i) => `translate(0, ${i * (statCellHeight + marginSize) + labelHeight})`)
+    .selectAll('rect')
+      .data(row => row)
+      .enter().append('rect')
+      .attr('x', (_d, i) => i * (statCellWidth + marginSize) + statLabelSize)
+      .attr('width', statCellWidth)
+      .attr('height', statCellHeight)
+      .attr('fill', d => statisticsInterpolate(hitScale(d)))
+
+  stat.selectAll('g.text')
+    .data(confusionMatrix)
+    .enter().append('g')
+      .classed('text', true)
+      .attr('transform', (_d, i) => `translate(0, ${i * (statCellHeight + marginSize) + labelHeight})`)
+    .selectAll('text')
+      .data(row => row)
+      .enter().append('text')
+      .attr('x', (_d, i) => i * (statCellWidth + marginSize) + statLabelSize + statCellWidth / 2)
+      .attr('y', statCellHeight / 2)
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'middle')
+      .attr('fill', '#ffffff')
+      .text(d => d + ' 日')
+
+  stat.append('g').classed('xAxis', true)
+    .selectAll('text')
+    .data(confusionMatrixLabel[0])
+      .enter().append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'middle')
+      .attr('x', (_d, i) => i * (statCellWidth + marginSize) + statLabelSize + statCellWidth/2)
+      .attr('y', labelHeight / 2)
+      .text(d => d)
+  
+  stat.append('g').classed('yAxis', true)
+    .selectAll('text')
+    .data(confusionMatrixLabel[1])
+      .enter().append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'middle')
+      .attr('x', statLabelSize / 2)
+      .attr('y', (_d, i) => labelHeight + i * statCellHeight + statCellHeight/2)
+      .text(d => d)
+
+  const axisWidth = (statCellWidth + marginSize) * 2;
+  const confusionAxis = d3.axisBottom(d3.scaleLinear([minHit, maxHit], [0, axisWidth])).tickFormat(function(d){ return d;})
+
+  stat.append('g')
+    .attr('class', 'x axis')
+    .attr('transform', 'translate(' + statLabelSize + ', ' + ((statCellHeight + marginSize) * 2 + labelHeight + axisHeight) + ')')
+    .call(confusionAxis);
+
+  stat.append('rect')
+    .style("fill", "url(#axis-gradient)")
+    .attr('width', axisWidth)
+    .attr('height', axisHeight / 2)
+    .attr('transform', 'translate(' + statLabelSize + ', ' + ((statCellHeight + marginSize) * 2 + labelHeight + axisHeight/2 ) + ')')
+  
+  const gradient = stat.append('linearGradient')
+    .attr('id', 'axis-gradient')
+
+  gradient.append('stop')
+    .attr('offset', '0%')
+    .attr('stop-color', statisticsInterpolate(0));
+
+  gradient.append('stop')
+    .attr('offset', '100%')
+    .attr('stop-color', statisticsInterpolate(1));
+
+  // Other statistic figures
+  // Demonstration of using D3 to manipulate HTML DOM
+  const positive = truePositive + falseNegative;
+  const negative = falsePositive + trueNegative;
+  
+  const accuracy = (truePositive + trueNegative)/(positive + negative);
+  const precision = truePositive/(truePositive + falsePositive);
+  const recall = truePositive/(truePositive + falseNegative);
+  const f1 = 2 * precision * recall / ( precision + recall )
+
+  const diagnostic = {
+    accuracy: accuracy,
+    precision: precision,
+    recall: recall,
+    f1: f1
+  }
+
+  const row = d3.select('#statistics').append('div')
+    .classed('diagnostic', true)
+    .selectAll('div.row')
+      .data(Object.keys(diagnostic))
+    .enter().append('div')
+      .classed('row', true);
+
+  row.append('div')
+    .classed('title', true)
+    .text(g => g.substr(0, 1).toUpperCase() +  g.substr(1));
+
+  row.append('div')
+    .classed('value', true)
+    .text(g => (diagnostic[g]).toFixed(2));
 })();
 
 // console.log(weekDayFormat(d3.timeMonth.floor(endDate)))
