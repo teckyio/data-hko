@@ -44,6 +44,29 @@
       flex: 1;
       border: solid 1px #cccccc;
     }
+    .day {
+      pointer-events: none;
+    }
+    #tooltip {
+      pointer-events: none;
+      position: absolute;
+      background: rgba(0, 0, 0, 0.8);
+      color: #ffffff;
+      opacity: 0;
+      padding: 0.5rem 1rem;
+      border-radius: 3px;
+      transform: translateX(-50%)
+    }
+    #tooltip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+    }
   </style>
 </head>
 <body>
@@ -56,6 +79,9 @@
 
     <h3>統計數據</h3>
     <div id="statistics"></div>
+
+    <div id="tooltip"></div>
+
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <script src="index.js"></script>
 </body>

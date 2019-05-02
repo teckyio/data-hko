@@ -21,7 +21,9 @@ const weekFormat = d3.timeFormat('%U');
 const forecastInterpolate = d3.interpolateRgb('#82E6FF', '#05337C');
 const forecastWordMap = d3.scalePoint().domain(['有微雨', '有驟雨', '有雨', '狂風雷暴']).range([0, 1]);
 const statisticsInterpolate = d3.interpolateRgb('#C4DED2', '#3D9970');
-  
+
+const tooltip = d3.select('#tooltip');
+
 (async function() {
   const actuals = await d3.json('/actuals-transform.json')
   const forecasts = await d3.json('/forecasts-transform.json')
@@ -90,9 +92,9 @@ const statisticsInterpolate = d3.interpolateRgb('#C4DED2', '#3D9970');
     .attr('ry', rectRadius)
     .attr('width', cellSize)
     .attr('height', cellSize)
-    .attr('fill', '#cccccc')
+    .attr('fill', '#cccccc');
 
-  forecastLegend.selectAll('text.cloud')
+forecastLegend.selectAll('text.cloud')
   .data(d3.range(0, forecastWordMap.domain().length).map(d => d / (forecastWordMap.domain().length - 1)))
     .enter().append('text')
     .classed('fa', true)
@@ -140,6 +142,25 @@ const statisticsInterpolate = d3.interpolateRgb('#C4DED2', '#3D9970');
     .attr('fill', d => forecastsLookup[dateFormat(d)] != null ? forecastInterpolate(forecastWordMap(forecastsLookup[dateFormat(d)])) : '#cccccc')
     .attr('width', cellSize)
     .attr('height', cellSize)
+    .on('mouseenter', (d, i) => {
+      let offset = d3.event.target.getBoundingClientRect();
+      console.log('enter', d)
+
+      tooltip.transition()
+        .duration(200)
+        .style('opacity', 1);
+      tooltip.html('<b>' + dateFormat(d) + '</b><br>預測: ' + (forecastsLookup[dateFormat(d)] || '無雨') + 
+                   '<br>實際: ' + (actualsLookup[dateFormat(d)] > 0 ? actualsLookup[dateFormat(d)] + ' 毫升' : '無雨'))	
+        .style('left', (offset.left + cellSize/2 ) + 'px')
+        .style('top', offset.top + window.scrollY - cellSize * 2 + 'px');
+    })
+    .on('mouseleave', (d) => {
+      console.log('leave', d)
+
+      tooltip.transition()
+        .duration(500)
+        .style('opacity', 0);
+    });
   
   svg.selectAll('text.day')
     .data(m => d3.timeDay.range(m, d3.timeMonth.offset(m, 1)))
@@ -297,6 +318,3 @@ const statisticsInterpolate = d3.interpolateRgb('#C4DED2', '#3D9970');
     .classed('value', true)
     .text(g => (diagnostic[g]).toFixed(2));
 })();
-
-// console.log(weekDayFormat(d3.timeMonth.floor(endDate)))
-// console.log(weekDayFormat(endDate))
