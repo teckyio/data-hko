@@ -29,6 +29,9 @@ async function extractTransform() {
 
   for (const result of results) {
     for (const day of result.dayData) {
+      if (day[0] === 'Mean/Total' || day[0] === 'Normal') {
+        continue;
+      }
       transformResults.push({
         date: moment(result.month + day[0], 'YYYYMMDD').format('YYYY-MM-DD'),
         rain: day[8] === 'Trace' ? 0 : parseFloat(day[8])
