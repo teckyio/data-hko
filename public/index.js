@@ -127,12 +127,12 @@ const tooltip = d3.select('#tooltip');
 
   const sliderSimple = d3
     .sliderBottom()
-    .min(0.05)
+    .min(0)
     .max(2)
     .width(legendWidth - 40)
-    .tickFormat(d => d3.format('.2')(d) + '毫米')
-    .ticks(7)
-    .default(0.05)
+    .tickFormat(d => '大於' + d3.format('.2')(d) + '毫米')
+    .ticks(4)
+    .default(0)
     .on('onchange', val => {
       thresold = val;
       update();
