@@ -4,8 +4,14 @@ const xpath = require('xpath');
 const DOMParser = require('xmldom').DOMParser;
 const fs = require('fs');
 
-async function forecastsExtract() {
-  let current = moment('2019-01-01 08:00', 'YYYY-MM-DD HH:mm')
+/**
+ * Extract historical forecasts information from data.gov.hk
+ *
+ * @param {string} start Start date to be scaped in "YYYY-MM-DD HH:mm" format. E.g ['2019-01-01 08:00']
+ * @return {{date: string, forecast: string}[]} The scaped data
+ */
+async function forecastsExtractHistory(start) {
+  let current = moment(start, 'YYYY-MM-DD HH:mm')
   let today = moment()
   let result = []
 
@@ -39,11 +45,37 @@ async function forecastsExtract() {
     current = current.add(1, 'day');
   }
 
-  await fs.promises.writeFile('forecasts-extract.json', JSON.stringify(result));
+  return result;
+  // await fs.promises.writeFile('forecasts-extract.json', JSON.stringify(result));
 }
 
-async function forecastsTransform() {
-  const results = JSON.parse(await fs.promises.readFile('forecasts-extract.json', 'utf8'));
+/**
+ * Extract current forecasts information directly from HKO
+ *
+ * @param {string} start Start date to be scaped in "YYYY-MM-DD HH:mm" format. E.g ['2019-01-01 08:00']
+ * @return {{date: string, forecast: string}} The scaped data
+ */
+async function forecastsExtractCurrent() {
+  const url = `https://rss.weather.gov.hk/rss/LocalWeatherForecast_uc.xml`;
+  const res = await axios.get(url)
+    
+  const doc = new DOMParser().parseFromString(res.data);
+  const forecast = xpath.select('*//item/description', doc);
+
+  return {
+    date: moment().format('YYYY-MM-DD'),
+    forecast: forecast[0].firstChild.data
+  }
+}
+
+/**
+ * Transform forecasts information from the HKO/Data.gov.hk extracts
+ *
+ * @param {{date: string, forecast: string}[]} results The extracted data
+ * @return {{date: string, forecast: string | null}[]} The transformed data
+ */
+function forecastsTransform(results) {
+  // const results = JSON.parse(await fs.promises.readFile('forecasts-extract.json', 'utf8'));
   const transformedResults = []
 
   for (const result of results) {
@@ -64,8 +96,14 @@ async function forecastsTransform() {
     })
   }
 
-  await fs.promises.writeFile('forecasts-transform.json', JSON.stringify(transformedResults))
+  return transformedResults;
+  // await fs.promises.writeFile('forecasts-transform.json', JSON.stringify(transformedResults))
 }
 
+module.exports = {
+  forecastsExtractHistory,
+  forecastsExtractCurrent,
+  forecastsTransform
+}
 // forecastsExtract();
-forecastsTransform();
+// forecastsTransform();

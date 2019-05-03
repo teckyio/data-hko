@@ -2,13 +2,13 @@ const axios = require('axios')
 const fs = require('fs')
 const moment = require('moment')
 
-async function extractActuals() {
-  const months = [
-    '201901',
-    '201902',
-    '201903',
-    '201904',
-  ]
+/**
+ * Extract actuals information from HKO
+ *
+ * @param {string[]} months Months to be scaped in "YYYYMM" format. E.g ['201901', '201902']
+ * @return {{month: string, dayData: string[][]}[]} The scaped data
+ */
+async function actualsExtract(months) {
   let result = [];
 
   for (const month of months) {
@@ -20,11 +20,18 @@ async function extractActuals() {
     });
   }
 
-  await fs.promises.writeFile('actuals-extract.json', JSON.stringify(result));
+  return result;
+  // await fs.promises.writeFile('actuals-extract.json', JSON.stringify(result));
 }
 
-async function extractTransform() {
-  const results = JSON.parse(await fs.promises.readFile('actuals-extract.json', 'utf8'));
+/**
+ * Transform actuals information from the HKO extracts
+ *
+ * @param {{month: string, dayData: string[][]}[]} results The extracted data
+ * @return {{date: string, rain: number}[]} The transformed data
+ */
+function actualsTransform(results) {
+  // const results = JSON.parse(await fs.promises.readFile('actuals-extract.json', 'utf8'));
   const transformResults = [];
 
   for (const result of results) {
@@ -39,8 +46,14 @@ async function extractTransform() {
     }
   }
 
-  await fs.promises.writeFile('actuals-transform.json', JSON.stringify(transformResults));
+  return transformResults;
+  // await fs.promises.writeFile('actuals-transform.json', JSON.stringify(transformResults));
+}
+
+module.exports = {
+  actualsExtract,
+  actualsTransform
 }
 
 // extractActuals();
-extractTransform();
+// extractTransform();
