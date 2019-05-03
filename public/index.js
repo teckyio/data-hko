@@ -7,6 +7,7 @@ const labelPadding = 5
 const rectRadius = 3
 const monthNameHeight = 40
 const monthNames = ['一月', '二月', '三月', '四月', '五月']
+let thresold = 0;
 
 const statLabelSize = 100
 const statCellWidth = Math.min((document.documentElement.clientWidth - statLabelSize * 2)/ 2, 200)
@@ -46,10 +47,11 @@ const tooltip = d3.select('#tooltip');
   const months = d3.timeMonth.range(d3.timeMonth.floor(minDate), maxDate, 1);
   
   // Drawing Legend
+  const legendWidth = (cellSize + labelSize) * forecastWordMap.domain().length
   const legend = d3.select('#legend')
     .append('svg')
-    .attr('width', (cellSize + labelSize) * forecastWordMap.domain().length)
-    .attr('height', cellSize * 4 + marginSize * 5)
+    .attr('width', legendWidth)
+    .attr('height', cellSize * 7 + marginSize * 8)
   
   const actualLegend = legend.append('g');
   
@@ -64,7 +66,7 @@ const tooltip = d3.select('#tooltip');
     .attr('height', cellSize)
     .attr('fill', (d) => forecastInterpolate(forecastWordMap(d)))
 
-    actualLegend.selectAll('text.label')
+  actualLegend.selectAll('text.label')
     .data(forecastWordMap.domain())
     .enter().append('text')
     .classed('label', true)
@@ -94,7 +96,7 @@ const tooltip = d3.select('#tooltip');
     .attr('height', cellSize)
     .attr('fill', '#cccccc');
 
-forecastLegend.selectAll('text.cloud')
+  forecastLegend.selectAll('text.cloud')
   .data(d3.range(0, forecastWordMap.domain().length).map(d => d / (forecastWordMap.domain().length - 1)))
     .enter().append('text')
     .classed('fa', true)
@@ -123,6 +125,30 @@ forecastLegend.selectAll('text.cloud')
     .attr('y', cellSize / 2)
     .text('當日實際落雨量')
 
+  const sliderSimple = d3
+    .sliderBottom()
+    .min(0.05)
+    .max(2)
+    .width(legendWidth - 40)
+    .tickFormat(d => d3.format('.2')(d) + '毫米')
+    .ticks(7)
+    .default(0.05)
+    .on('onchange', val => {
+      thresold = val;
+      update();
+    });
+  
+  legend.append('text')
+    .attr('dominant-baseline', 'middle')
+    .attr('font-size', 16)
+    .attr('y', (cellSize + marginSize) * 5 + cellSize / 2)
+    .text('有雨定義')
+
+  legend
+    .append('g')
+    .attr('transform', `translate(20, ${cellSize * 6 + marginSize * 7})`)
+    .call(sliderSimple);
+
   // Drawing Calendars
   const svg = d3.select('#calendar')
     .selectAll('svg')
@@ -144,7 +170,6 @@ forecastLegend.selectAll('text.cloud')
     .attr('height', cellSize)
     .on('mouseenter', (d, i) => {
       let offset = d3.event.target.getBoundingClientRect();
-      console.log('enter', d)
 
       tooltip.transition()
         .duration(200)
@@ -155,8 +180,6 @@ forecastLegend.selectAll('text.cloud')
         .style('top', offset.top + window.scrollY - cellSize * 2 + 'px');
     })
     .on('mouseleave', (d) => {
-      console.log('leave', d)
-
       tooltip.transition()
         .duration(500)
         .style('opacity', 0);
@@ -172,7 +195,8 @@ forecastLegend.selectAll('text.cloud')
     .attr('dominant-baseline', 'middle')
     .attr('x', d => cellSize / 2 + weekDayFormat(d) * (cellSize + marginSize))
     .attr('y', d => cellSize / 2 + monthNameHeight + (weekFormat(d) - weekFormat(d3.timeMonth.floor(d))) * (cellSize + marginSize))
-    .attr('font-size', d => actualsLookup[dateFormat(d)] > 0 ? actualsLookup[dateFormat(d)] / maxRain * 20 + 10 : 0)
+    .attr('font-size', d => actualsLookup[dateFormat(d)] > thresold ? actualsLookup[dateFormat(d)] / maxRain * 20 + 10 : 0)
+    .attr('opacity', d => actualsLookup[dateFormat(d)] > thresold ? 1 : 0)
     .text(d => actualsLookup[dateFormat(d)] > 0 ? '\uf73d' : '')
 
   svg.append('text')
@@ -184,26 +208,6 @@ forecastLegend.selectAll('text.cloud')
     .text(m => monthNames[m.getMonth()])
   
   // Statistics
-  const confusionMatrix = [
-    [
-      forecasts.filter(f => f.rain != null && actualsLookup[f.date] > 0).length,
-      forecasts.filter(f => f.rain == null && actualsLookup[f.date] > 0).length,
-    ],
-    [
-      forecasts.filter(f => f.rain != null && actualsLookup[f.date] == 0).length,
-      forecasts.filter(f => f.rain == null && actualsLookup[f.date] == 0).length,
-    ]
-  ]
-  const truePositive = confusionMatrix[0][0];
-  const falseNegative = confusionMatrix[0][1];
-  const falsePositive = confusionMatrix[1][0];
-  const trueNegative = confusionMatrix[1][1];
-
-  const maxHit = d3.max([truePositive, falseNegative, falsePositive, trueNegative]) 
-  const minHit = d3.min([truePositive, falseNegative, falsePositive, trueNegative]) 
-
-  const hitScale = d3.scaleLinear([minHit, maxHit], [0, 1])
-
   const confusionMatrixLabel = [
     ['預測有雨', '預測無雨'],
     ['實際有雨', '實際無雨'],
@@ -212,34 +216,6 @@ forecastLegend.selectAll('text.cloud')
   const stat = d3.select('#statistics').append('svg')
     .attr('width', (statCellWidth + marginSize) * 2 + statLabelSize)
     .attr('height', (statCellHeight + marginSize) * 2 + labelHeight + axisHeight + 20)
-
-    stat.selectAll('g.rect')
-    .data(confusionMatrix)
-    .enter().append('g')
-      .classed('rect', true)
-      .attr('transform', (_d, i) => `translate(0, ${i * (statCellHeight + marginSize) + labelHeight})`)
-    .selectAll('rect')
-      .data(row => row)
-      .enter().append('rect')
-      .attr('x', (_d, i) => i * (statCellWidth + marginSize) + statLabelSize)
-      .attr('width', statCellWidth)
-      .attr('height', statCellHeight)
-      .attr('fill', d => statisticsInterpolate(hitScale(d)))
-
-  stat.selectAll('g.text')
-    .data(confusionMatrix)
-    .enter().append('g')
-      .classed('text', true)
-      .attr('transform', (_d, i) => `translate(0, ${i * (statCellHeight + marginSize) + labelHeight})`)
-    .selectAll('text')
-      .data(row => row)
-      .enter().append('text')
-      .attr('x', (_d, i) => i * (statCellWidth + marginSize) + statLabelSize + statCellWidth / 2)
-      .attr('y', statCellHeight / 2)
-      .attr('text-anchor', 'middle')
-      .attr('dominant-baseline', 'middle')
-      .attr('fill', '#ffffff')
-      .text(d => d + ' 日')
 
   stat.append('g').classed('xAxis', true)
     .selectAll('text')
@@ -262,19 +238,7 @@ forecastLegend.selectAll('text.cloud')
       .text(d => d)
 
   const axisWidth = (statCellWidth + marginSize) * 2;
-  const confusionAxis = d3.axisBottom(d3.scaleLinear([minHit, maxHit], [0, axisWidth])).tickFormat(function(d){ return d;})
 
-  stat.append('g')
-    .attr('class', 'x axis')
-    .attr('transform', 'translate(' + statLabelSize + ', ' + ((statCellHeight + marginSize) * 2 + labelHeight + axisHeight) + ')')
-    .call(confusionAxis);
-
-  stat.append('rect')
-    .style("fill", "url(#axis-gradient)")
-    .attr('width', axisWidth)
-    .attr('height', axisHeight / 2)
-    .attr('transform', 'translate(' + statLabelSize + ', ' + ((statCellHeight + marginSize) * 2 + labelHeight + axisHeight/2 ) + ')')
-  
   const gradient = stat.append('linearGradient')
     .attr('id', 'axis-gradient')
 
@@ -286,35 +250,127 @@ forecastLegend.selectAll('text.cloud')
     .attr('offset', '100%')
     .attr('stop-color', statisticsInterpolate(1));
 
-  // Other statistic figures
-  // Demonstration of using D3 to manipulate HTML DOM
-  const positive = truePositive + falseNegative;
-  const negative = falsePositive + trueNegative;
+  stat.append('rect')
+    .style("fill", "url(#axis-gradient)")
+    .attr('width', axisWidth)
+    .attr('height', axisHeight / 2)
+    .attr('transform', 'translate(' + statLabelSize + ', ' + ((statCellHeight + marginSize) * 2 + labelHeight + axisHeight/2 ) + ')')
   
-  const accuracy = (truePositive + trueNegative)/(positive + negative);
-  const precision = truePositive/(truePositive + falsePositive);
-  const recall = truePositive/(truePositive + falseNegative);
-  const f1 = 2 * precision * recall / ( precision + recall )
+  const gAxis = stat.append('g')
+    .attr('class', 'x axis')
+    .attr('transform', 'translate(' + statLabelSize + ', ' + ((statCellHeight + marginSize) * 2 + labelHeight + axisHeight) + ')');
 
-  const diagnostic = {
-    accuracy: accuracy,
-    precision: precision,
-    recall: recall,
-    f1: f1
-  }
-
-  const row = d3.select('#statistics').append('div')
+  const diagnosticRow = d3.select('#statistics').append('div')
     .classed('diagnostic', true)
     .selectAll('div.row')
-      .data(Object.keys(diagnostic))
+      .data(['accuracy', 'precision', 'recall', 'f1'])
     .enter().append('div')
       .classed('row', true);
 
-  row.append('div')
+  diagnosticRow.append('div')
     .classed('title', true)
     .text(g => g.substr(0, 1).toUpperCase() +  g.substr(1));
 
-  row.append('div')
+  diagnosticRow.append('div')
     .classed('value', true)
-    .text(g => (diagnostic[g]).toFixed(2));
+
+  function updateStatistics() {
+    const confusionMatrix = [
+      [
+        forecasts.filter(f => f.rain != null && actualsLookup[f.date] > thresold).length,
+        forecasts.filter(f => f.rain == null && actualsLookup[f.date] > thresold).length,
+      ],
+      [
+        forecasts.filter(f => f.rain != null && actualsLookup[f.date] <= thresold).length,
+        forecasts.filter(f => f.rain == null && actualsLookup[f.date] <= thresold).length,
+      ]
+    ]
+    const truePositive = confusionMatrix[0][0];
+    const falseNegative = confusionMatrix[0][1];
+    const falsePositive = confusionMatrix[1][0];
+    const trueNegative = confusionMatrix[1][1];
+
+    const maxHit = d3.max([truePositive, falseNegative, falsePositive, trueNegative]) 
+    const minHit = d3.min([truePositive, falseNegative, falsePositive, trueNegative]) 
+
+    const hitScale = d3.scaleLinear([minHit, maxHit], [0, 1])
+
+    const gRect = stat.selectAll('g.rect')
+      .data(confusionMatrix);
+    
+    const dataRect = gRect.enter().append('g')
+        .classed('rect', true)
+        .attr('transform', (_d, i) => `translate(0, ${i * (statCellHeight + marginSize) + labelHeight})`)
+        .merge(gRect)
+        .selectAll('rect')
+        .data(row => row);
+
+    dataRect.enter().append('rect')
+        .attr('x', (_d, i) => i * (statCellWidth + marginSize) + statLabelSize)
+        .attr('width', statCellWidth)
+        .attr('height', statCellHeight)
+      .merge(dataRect)
+        .transition()
+        .attr('fill', d => statisticsInterpolate(hitScale(d)))
+
+    const gText = stat.selectAll('g.text')
+      .data(confusionMatrix);
+
+    const dataText = gText.enter().append('g')
+        .classed('text', true)
+        .attr('transform', (_d, i) => `translate(0, ${i * (statCellHeight + marginSize) + labelHeight})`)
+        .merge(gText)
+        .selectAll('text')
+        .data(row => row);
+
+    dataText.enter().append('text')
+        .attr('x', (_d, i) => i * (statCellWidth + marginSize) + statLabelSize + statCellWidth / 2)
+        .attr('y', statCellHeight / 2)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('fill', '#ffffff')
+      .merge(dataText)
+        .transition()
+        .text(d => d + ' 日')
+
+    const confusionAxis = d3.axisBottom(d3.scaleLinear([minHit, maxHit], [0, axisWidth])).tickFormat(function(d){ return d;})
+
+    gAxis.transition().call(confusionAxis);
+
+    // Other statistic figures
+    // Demonstration of using D3 to manipulate HTML DOM
+    const positive = truePositive + falseNegative;
+    const negative = falsePositive + trueNegative;
+    
+    const accuracy = (truePositive + trueNegative)/(positive + negative);
+    const precision = truePositive/(truePositive + falsePositive);
+    const recall = truePositive/(truePositive + falseNegative);
+    const f1 = 2 * precision * recall / ( precision + recall )
+
+    const diagnostic = {
+      accuracy: accuracy,
+      precision: precision,
+      recall: recall,
+      f1: f1
+    }
+
+    diagnosticRow.select('div.value')
+      .text(g => (diagnostic[g]).toFixed(2));
+  }
+  
+  // Slider
+  function updateDay() {
+    svg.selectAll('text.day')
+      .transition()
+      .attr('opacity', d => actualsLookup[dateFormat(d)] > thresold ? 1 : 0)
+
+  }
+  
+  function update() {
+    updateDay();
+    updateStatistics();
+  }
+
+  update();
+
 })();
