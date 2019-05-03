@@ -1,5 +1,5 @@
-const Actuals = require('./actuals');
-const Forecasts = require('./forecasts');
+const Actuals = require('./services/actuals');
+const Forecasts = require('./services/forecasts');
 const AWS = require('aws-sdk');
 const dotenv = require('dotenv');
 
