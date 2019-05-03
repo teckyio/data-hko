@@ -115,7 +115,7 @@ forecastLegend.selectAll('text.cloud')
     .attr('font-size', 12)
     .attr('x', (_d, i) => (cellSize + labelSize) * i + cellSize + labelPadding )
     .attr('y', cellSize + marginSize + cellSize / 2)
-    .text((d) => d > 0 ? (d * maxRain).toFixed(0) + ' 毫升' : '無雨')
+    .text((d) => d > 0 ? (d * maxRain).toFixed(0) + ' 毫米' : '無雨')
   
   forecastLegend.append('text')
     .attr('dominant-baseline', 'middle')
@@ -150,7 +150,7 @@ forecastLegend.selectAll('text.cloud')
         .duration(200)
         .style('opacity', 1);
       tooltip.html('<b>' + dateFormat(d) + '</b><br>預測: ' + (forecastsLookup[dateFormat(d)] || '無雨') + 
-                   '<br>實際: ' + (actualsLookup[dateFormat(d)] > 0 ? actualsLookup[dateFormat(d)] + ' 毫升' : '無雨'))	
+                   '<br>實際: ' + (actualsLookup[dateFormat(d)] > 0 ? actualsLookup[dateFormat(d)] + ' 毫米' : '無雨'))	
         .style('left', (offset.left + cellSize/2 ) + 'px')
         .style('top', offset.top + window.scrollY - cellSize * 2 + 'px');
     })
