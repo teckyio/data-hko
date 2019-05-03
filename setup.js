@@ -47,7 +47,7 @@ if (process.env.SKIP_ACTUALS_TRANSFORM == null) {
     }).promise();
 
     const transformedResult = Actuals.actualsTransform(data.Items.map(item => ({
-      date: AWS.DynamoDB.Converter.output(item.date),
+      month: AWS.DynamoDB.Converter.output(item.month),
       dayData: AWS.DynamoDB.Converter.output(item.dayData),
     })));
 
