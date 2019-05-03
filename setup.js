@@ -5,7 +5,7 @@ const moment = require('moment');
 const dotenv = require('dotenv');
 
 dotenv.config();
-AWS.config.update({ region: process.env.AWS_REGION });
+AWS.config.update({ region: process.env.DEFAULT_AWS_REGION });
 
 const ddb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
 
