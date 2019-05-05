@@ -1,0 +1,22 @@
+version: 2.1
+
+orbs:
+  aws-cli: circleci/aws-cli@0.1.13
+
+jobs:
+  deploy:
+    docker:
+      - image: 'circleci/python:2.7'
+    steps:
+      - checkout
+      - aws-cli/install
+      - run:
+          name: Sync to S3
+          command: |
+            aws s3 sync . s3://$S3_BUCKET --acl public-read
+
+workflows:
+  version: 2
+  deploy:
+    jobs:
+      - deploy
