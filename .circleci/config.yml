@@ -13,7 +13,7 @@ jobs:
       - run:
           name: Sync to S3
           command: |
-            aws s3 sync . s3://$S3_BUCKET --acl public-read
+            aws s3 sync public/ s3://$S3_BUCKET --acl public-read
 
 workflows:
   version: 2
