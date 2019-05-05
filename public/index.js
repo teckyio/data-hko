@@ -26,8 +26,8 @@ const statisticsInterpolate = d3.interpolateRgb('#C4DED2', '#3D9970');
 const tooltip = d3.select('#tooltip');
 
 (async function() {
-  const actuals = await d3.json('/actuals-transform.json')
-  const forecasts = await d3.json('/forecasts-transform.json')
+  const actuals = await d3.json('https://data-hko.tecky.io/actuals-transform.json')
+  const forecasts = await d3.json('https://data-hko.tecky.io/forecasts-transform.json')
 
   // Prepare the data
   const forecastsLookup = d3.nest()
@@ -159,7 +159,7 @@ const tooltip = d3.select('#tooltip');
     .append('g')
   
   svg.selectAll('rect')
-    .data(m => d3.timeDay.range(m, d3.timeMonth.offset(m, 1)))
+    .data(m => d3.timeDay.range(m, d3.min([d3.timeDay.offset(maxDate, 1), d3.timeMonth.offset(m, 1)]))) 
     .enter().append('rect')
     .attr('x', d => weekDayFormat(d) * (cellSize + marginSize))
     .attr('y', d => monthNameHeight + (weekFormat(d) - weekFormat(d3.timeMonth.floor(d))) * (cellSize + marginSize))
