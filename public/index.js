@@ -29,6 +29,19 @@ const tooltip = d3.select('#tooltip');
   const actuals = await d3.json('https://data-hko.tecky.io/actuals-transform.json')
   const forecasts = await d3.json('https://data-hko.tecky.io/forecasts-transform.json')
 
+  const minDate = d3.min(forecasts.map(a => dateParse(a.date)))
+  const maxDate = d3.max(forecasts.map(a => dateParse(a.date)))
+
+  const allDays = d3.timeDay.range(minDate, maxDate);
+  for (const day of allDays) {
+    if (actuals.find(a => a.date == dateFormat(day)) == null) {
+      actuals.push({
+        date: dateFormat(day),
+        rain: 0
+      })
+    }
+  }
+
   // Prepare the data
   const forecastsLookup = d3.nest()
     .key(a => a.date)
@@ -40,8 +53,6 @@ const tooltip = d3.select('#tooltip');
     .rollup(a => a[0].rain)
     .object(actuals);
 
-  const minDate = d3.min(actuals.map(a => dateParse(a.date)))
-  const maxDate = d3.max(actuals.map(a => dateParse(a.date)))
   const maxRain = d3.max(actuals.map(a => a.rain))
 
   const months = d3.timeMonth.range(d3.timeMonth.floor(minDate), maxDate, 1);

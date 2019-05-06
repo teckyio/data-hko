@@ -1,4 +1,4 @@
-const Actuals = require('./services/actuals');
+const Actuals = require('./services/actuals-areas');
 const Forecasts = require('./services/forecasts');
 const AWS = require('aws-sdk');
 const moment = require('moment');
@@ -9,26 +9,22 @@ AWS.config.update({ region: process.env.DEFAULT_AWS_REGION });
 
 const ddb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
 
-const months = ['201901'];
-let latest = moment(months[months.length - 1], 'YYYYMM');
-while (latest.isBefore(moment(), 'month')) {
-  latest = latest.add(1, 'month')
-  months.push(latest.format('YYYYMM'))
-}
-
 // Actuals Extract
 if (process.env.SKIP_ACTUALS_EXTRACT == null) {
   (async () => {
-    const result = await Actuals.actualsExtract(months);
+    const result = await Actuals.actualsExtract('2019-01-01');
     for (let i = 0; i < result.length; i += 25) {
       await ddb.batchWriteItem({
         RequestItems: {
-          "actuals-extract": result.slice(i, i + 25).map(r => 
+          "actuals-areas-extract": result.slice(i, i + 25).map(r => 
             ({
               PutRequest: {
                 Item: {
-                  month: AWS.DynamoDB.Converter.input(r.month),
-                  dayData: AWS.DynamoDB.Converter.input(r.dayData)
+                  key: AWS.DynamoDB.Converter.input(r.key),
+                  date: AWS.DynamoDB.Converter.input(r.date),
+                  hour: AWS.DynamoDB.Converter.input(r.hour),
+                  area: AWS.DynamoDB.Converter.input(r.area),
+                  rain: AWS.DynamoDB.Converter.input(r.rain)
                 }
               }
             })
@@ -43,12 +39,15 @@ if (process.env.SKIP_ACTUALS_EXTRACT == null) {
 if (process.env.SKIP_ACTUALS_TRANSFORM == null) {
   (async () => {
     const data = await ddb.scan({
-      TableName: 'actuals-extract',
+      TableName: 'actuals-areas-extract',
     }).promise();
 
     const transformedResult = Actuals.actualsTransform(data.Items.map(item => ({
-      month: AWS.DynamoDB.Converter.output(item.month),
-      dayData: AWS.DynamoDB.Converter.output(item.dayData),
+      key: AWS.DynamoDB.Converter.output(item.key),
+      date: AWS.DynamoDB.Converter.output(item.date),
+      hour: AWS.DynamoDB.Converter.output(item.hour),
+      area: AWS.DynamoDB.Converter.output(item.area),
+      rain: AWS.DynamoDB.Converter.output(item.rain)
     })));
 
     for (let i = 0; i < transformedResult.length; i += 25) {

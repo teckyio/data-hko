@@ -1,4 +1,4 @@
-const Actuals = require('./services/actuals');
+const Actuals = require('./services/actuals-areas');
 const Forecasts = require('./services/forecasts');
 const AWS = require('aws-sdk');
 const moment = require('moment');
@@ -16,15 +16,27 @@ async function processEvent() {
     // Actuals
     // Substract one day because of the delay of actual data
     {
-      const result = await Actuals.actualsExtract([moment().subtract(1, 'day').format('YYYYMM')]);
-      await ddb.putItem({
-        TableName: 'actuals-extract',
-        Item: {
-          month: AWS.DynamoDB.Converter.input(result[0].month),
-          dayData: AWS.DynamoDB.Converter.input(result[0].dayData)
-        }
-      }).promise();
-
+      const result = await Actuals.actualsExtract([moment().subtract(1, 'day').format('YYYY-MM-DD')]);
+      for (let i = 0; i < result.length; i += 25) {
+        await ddb.batchWriteItem({
+          RequestItems: {
+            "actuals-areas-extract": result.slice(i, i + 25).map(r => 
+              ({
+                PutRequest: {
+                  Item: {
+                    key: AWS.DynamoDB.Converter.input(r.key),
+                    date: AWS.DynamoDB.Converter.input(r.date),
+                    hour: AWS.DynamoDB.Converter.input(r.hour),
+                    area: AWS.DynamoDB.Converter.input(r.area),
+                    rain: AWS.DynamoDB.Converter.input(r.rain)
+                  }
+                }
+              })
+            )
+          }
+        }).promise();
+      }
+  
       const transformedResult = Actuals.actualsTransform(result);
       for (let i = 0; i < transformedResult.length; i += 25) {
         await ddb.batchWriteItem({
